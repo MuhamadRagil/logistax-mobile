@@ -1,0 +1,61 @@
+name: logistax_mobile
+description: "Logistax HR System Mobile App"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management & routing
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.2.0
+
+  # Network & storage
+  dio: ^5.4.3
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.2
+  path_provider: ^2.1.3
+
+  # Absensi: tombol + GPS
+  geolocator: ^13.0.1
+  permission_handler: ^11.3.1
+
+  # Auth
+  local_auth: ^2.3.0
+
+  # UI
+  fl_chart: ^0.69.0
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  table_calendar: ^3.1.2
+  flutter_svg: ^2.0.10
+  lucide_icons_flutter: ^3.1.20
+
+  # Files & sharing
+  image_picker: ^1.1.2
+  file_picker: 11.0.0
+  url_launcher: ^6.3.0
+  share_plus: ^10.0.0
+  open_filex: ^4.5.0
+
+  # Format tanggal & Rupiah
+  intl: ^0.19.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/logo-logistax.png
+    - assets/images/logo-logistax-white.svg

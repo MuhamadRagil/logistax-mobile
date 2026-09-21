@@ -47,6 +47,7 @@ class AppStrings {
     'permanent': 'Karyawan Tetap',
     'contract': 'Kontrak',
     'probation': 'Probation',
+    'freelance': 'Freelance',
   };
 
   static const roleLabel = {

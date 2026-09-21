@@ -23,13 +23,34 @@ class ProfileRepository {
     }
   }
 
-  /// PATCH /employees/me/profile {phone, address} — hanya field milik sendiri
-  /// yang boleh diubah karyawan; nama/NIK/jabatan tetap wewenang HRD.
-  Future<EmployeeProfile> updateMyProfile({required String phone, required String address}) async {
+  /// PATCH /employees/me/profile — field milik sendiri yang boleh diubah
+  /// karyawan; NIK/jabatan/departemen/status/tanggal masuk tetap wewenang HRD.
+  /// `birthDate` (format "yyyy-MM-dd") dikirim hanya bila terisi — mengirim
+  /// null akan gagal validasi (`@IsDateString`) di backend.
+  Future<EmployeeProfile> updateMyProfile({
+    required String fullName,
+    required String phone,
+    required String address,
+    String? gender,
+    String? birthDate,
+    required String bankName,
+    required String bankAccountNumber,
+    required String npwp,
+    required String bpjsKesehatan,
+    required String bpjsTk,
+  }) async {
     try {
       final res = await _dio.patch(ApiConstants.employeeMeProfile, data: {
+        'fullName': fullName,
         'phone': phone,
         'address': address,
+        if (gender != null) 'gender': gender, // 'male' | 'female'
+        if (birthDate != null) 'birthDate': birthDate,
+        'bankName': bankName,
+        'bankAccountNumber': bankAccountNumber,
+        'npwp': npwp,
+        'bpjsKesehatan': bpjsKesehatan,
+        'bpjsTk': bpjsTk,
       });
       return EmployeeProfile.fromJson((res.data['data'] as Map).cast<String, dynamic>());
     } catch (e) {

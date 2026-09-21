@@ -7,6 +7,13 @@ String formatDateLong(dynamic value) {
   return '${d.day} ${AppStrings.bulan[d.month - 1]} ${d.year}';
 }
 
+/// → "20/07/2026"
+String formatDateSlash(dynamic value) {
+  final d = _parse(value);
+  if (d == null) return '-';
+  return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+}
+
 /// → "Senin, 20 Juli 2026"
 String formatDateFull(dynamic value) {
   final d = _parse(value);

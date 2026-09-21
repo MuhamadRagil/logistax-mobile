@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_strings.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/utils/date_util.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/empty_state.dart';
@@ -12,9 +14,10 @@ import '../../../../shared/widgets/error_state.dart';
 import '../../../../shared/widgets/loading_shimmer.dart';
 import '../../providers/profile_provider.dart';
 
-/// Halaman "Edit Profil" — karyawan bisa mengubah foto, nomor HP & alamat
-/// sendiri (PATCH /employees/me/profile & /employees/me/photo). Nama, NIK,
-/// dan jabatan tetap readonly karena wewenang HRD.
+/// Halaman "Edit Profil" — karyawan bisa mengubah data pribadi & keuangan
+/// miliknya sendiri (PATCH /employees/me/profile & /employees/me/photo).
+/// NIK, jabatan, departemen, status kepegawaian, dan tanggal masuk tetap
+/// readonly karena wewenang HRD.
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
 
@@ -23,11 +26,24 @@ class EditProfilePage extends ConsumerStatefulWidget {
 }
 
 class _EditProfilePageState extends ConsumerState<EditProfilePage> {
+  // Editable
   final _fullName = TextEditingController();
-  final _nik = TextEditingController();
-  final _position = TextEditingController();
   final _phone = TextEditingController();
   final _address = TextEditingController();
+  final _bankName = TextEditingController();
+  final _bankAccountNumber = TextEditingController();
+  final _npwp = TextEditingController();
+  final _bpjsKesehatan = TextEditingController();
+  final _bpjsTk = TextEditingController();
+  DateTime? _birthDate;
+  String? _gender; // 'male' | 'female'
+
+  // Readonly (Informasi Pekerjaan)
+  final _nik = TextEditingController();
+  final _position = TextEditingController();
+  final _department = TextEditingController();
+  final _employmentStatus = TextEditingController();
+  final _hireDate = TextEditingController();
 
   bool _fieldsLoaded = false;
   bool _saving = false;
@@ -36,11 +52,30 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   @override
   void dispose() {
     _fullName.dispose();
-    _nik.dispose();
-    _position.dispose();
     _phone.dispose();
     _address.dispose();
+    _bankName.dispose();
+    _bankAccountNumber.dispose();
+    _npwp.dispose();
+    _bpjsKesehatan.dispose();
+    _bpjsTk.dispose();
+    _nik.dispose();
+    _position.dispose();
+    _department.dispose();
+    _employmentStatus.dispose();
+    _hireDate.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(now.year - 25),
+      firstDate: DateTime(now.year - 80),
+      lastDate: DateTime(now.year - 15),
+    );
+    if (picked != null) setState(() => _birthDate = picked);
   }
 
   Future<void> _changePhoto() async {
@@ -97,8 +132,16 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     setState(() => _saving = true);
     try {
       await ref.read(profileRepositoryProvider).updateMyProfile(
+            fullName: _fullName.text.trim(),
             phone: _phone.text.trim(),
             address: _address.text.trim(),
+            gender: _gender,
+            birthDate: _birthDate != null ? toApiDate(_birthDate!) : null,
+            bankName: _bankName.text.trim(),
+            bankAccountNumber: _bankAccountNumber.text.trim(),
+            npwp: _npwp.text.trim(),
+            bpjsKesehatan: _bpjsKesehatan.text.trim(),
+            bpjsTk: _bpjsTk.text.trim(),
           );
       ref.invalidate(myProfileProvider);
       if (!mounted) return;
@@ -120,7 +163,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final async = ref.watch(myProfileProvider);
 
     return Scaffold(
@@ -128,7 +170,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       body: async.when(
         loading: () => const Padding(
           padding: EdgeInsets.all(16),
-          child: LoadingShimmer(count: 5, height: 70),
+          child: LoadingShimmer(count: 6, height: 70),
         ),
         error: (error, _) =>
             ErrorState(error: error, onRetry: () => ref.invalidate(myProfileProvider)),
@@ -144,14 +186,27 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             );
           }
 
-          _fullName.text = profile.fullName.isEmpty ? '-' : profile.fullName;
+          // Readonly — selalu sinkron dengan data server, aman diisi tiap build.
           _nik.text = profile.nik.isEmpty ? '-' : profile.nik;
           _position.text = profile.positionName ?? '-';
-          // Hanya isi sekali dari server — supaya ketikan user tidak
+          _department.text = profile.departmentName ?? '-';
+          _employmentStatus.text =
+              AppStrings.employmentStatusLabel[profile.employmentStatus] ?? profile.employmentStatus;
+          _hireDate.text = formatDateLong(profile.hireDate);
+
+          // Editable — hanya isi sekali dari server supaya ketikan user tidak
           // tertimpa saat provider di-invalidate ulang (mis. setelah save).
           if (!_fieldsLoaded) {
+            _fullName.text = profile.fullName;
             _phone.text = profile.phone ?? '';
             _address.text = profile.address ?? '';
+            _bankName.text = profile.bankName ?? '';
+            _bankAccountNumber.text = profile.bankAccountNumber ?? '';
+            _npwp.text = profile.npwp ?? '';
+            _bpjsKesehatan.text = profile.bpjsKesehatan ?? '';
+            _bpjsTk.text = profile.bpjsTk ?? '';
+            _gender = (profile.gender == 'male' || profile.gender == 'female') ? profile.gender : null;
+            _birthDate = DateTime.tryParse(profile.birthDate ?? '');
             _fieldsLoaded = true;
           }
 
@@ -202,17 +257,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              Text(
-                'Data Karyawan',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
+              const SizedBox(height: 28),
+
+              _SectionTitle('Informasi Pribadi'),
               const SizedBox(height: 12),
-              AppTextField(controller: _fullName, label: 'Nama Lengkap', enabled: false),
-              const SizedBox(height: 14),
-              AppTextField(controller: _nik, label: 'NIK', enabled: false),
-              const SizedBox(height: 14),
-              AppTextField(controller: _position, label: 'Jabatan', enabled: false),
+              AppTextField(controller: _fullName, label: 'Nama Lengkap'),
               const SizedBox(height: 14),
               AppTextField(
                 controller: _phone,
@@ -227,6 +276,73 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 hint: 'Alamat tempat tinggal',
                 maxLines: 3,
               ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                initialValue: _gender,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Jenis Kelamin',
+                  prefixIcon: Icon(Icons.wc_rounded),
+                ),
+                hint: const Text('Pilih jenis kelamin'),
+                items: const [
+                  DropdownMenuItem(value: 'male', child: Text('Laki-laki')),
+                  DropdownMenuItem(value: 'female', child: Text('Perempuan')),
+                ],
+                onChanged: (v) => setState(() => _gender = v),
+              ),
+              const SizedBox(height: 14),
+              _DateField(
+                label: 'Tanggal Lahir',
+                value: _birthDate == null ? null : formatDateSlash(_birthDate),
+                onTap: _pickBirthDate,
+              ),
+
+              const SizedBox(height: 24),
+              _SectionTitle('Informasi Keuangan'),
+              const SizedBox(height: 12),
+              AppTextField(controller: _bankName, label: 'Nama Bank', hint: 'mis. BCA'),
+              const SizedBox(height: 14),
+              AppTextField(
+                controller: _bankAccountNumber,
+                label: 'Nomor Rekening',
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 14),
+              AppTextField(controller: _npwp, label: 'NPWP'),
+
+              const SizedBox(height: 24),
+              _SectionTitle('Data BPJS'),
+              const SizedBox(height: 12),
+              AppTextField(
+                controller: _bpjsKesehatan,
+                label: 'BPJS Kesehatan',
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 14),
+              AppTextField(
+                controller: _bpjsTk,
+                label: 'BPJS Ketenagakerjaan',
+                keyboardType: TextInputType.number,
+              ),
+
+              const SizedBox(height: 24),
+              _SectionTitle('Informasi Pekerjaan'),
+              const SizedBox(height: 12),
+              AppTextField(controller: _nik, label: 'NIK', enabled: false),
+              const SizedBox(height: 14),
+              AppTextField(controller: _position, label: 'Jabatan', enabled: false),
+              const SizedBox(height: 14),
+              AppTextField(controller: _department, label: 'Departemen', enabled: false),
+              const SizedBox(height: 14),
+              AppTextField(
+                controller: _employmentStatus,
+                label: 'Status Kepegawaian',
+                enabled: false,
+              ),
+              const SizedBox(height: 14),
+              AppTextField(controller: _hireDate, label: 'Tanggal Masuk', enabled: false),
+
               const SizedBox(height: 24),
               AppButton(
                 label: 'Simpan Perubahan',
@@ -236,6 +352,49 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+    );
+  }
+}
+
+class _DateField extends StatelessWidget {
+  const _DateField({required this.label, required this.value, required this.onTap});
+
+  final String label;
+  final String? value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: const Icon(Icons.cake_outlined),
+        ),
+        child: Text(
+          value ?? 'Pilih tanggal',
+          style: value == null
+              ? theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)
+              : theme.textTheme.bodyMedium,
+        ),
       ),
     );
   }

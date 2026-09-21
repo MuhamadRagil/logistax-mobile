@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'shared/widgets/trial_reminder_dialog.dart';
 
 // Catatan: Firebase/FCM sengaja belum diaktifkan (belum ada google-services.json).
 // Notifikasi in-app via GET /notifications tetap berfungsi.
@@ -24,6 +25,7 @@ class LogistaxApp extends ConsumerWidget {
       theme: lightTheme(),
       themeMode: ThemeMode.light,
       routerConfig: router,
+      builder: (context, child) => TrialGate(child: child ?? const SizedBox.shrink()),
     );
   }
 }

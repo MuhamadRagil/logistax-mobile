@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -36,12 +37,17 @@ import '../../shared/models/notification_model.dart';
 import '../../shared/models/payslip_model.dart';
 import '../../shared/widgets/bottom_nav_shell.dart';
 
+/// Navigator root — dipakai untuk menampilkan dialog dari luar konteks halaman
+/// (mis. splash yang sudah digantikan router saat dialog perlu tampil).
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   // read (bukan watch) supaya router hanya dibuat sekali;
   // perubahan auth memicu redirect via refreshListenable.
   final auth = ref.read(authControllerProvider);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: auth,
     redirect: (context, state) {

@@ -4,7 +4,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/storage/secure_storage.dart';
+import '../../../../shared/widgets/trial_reminder_dialog.dart';
 import '../../providers/auth_provider.dart';
 
 /// Splash: logo fade-in + cek sesi. Redirect ditangani GoRouter
@@ -28,6 +30,14 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         final auth = ref.read(authControllerProvider);
         if (auth.status == AuthStatus.unknown) {
           await auth.init();
+        }
+        if (auth.status == AuthStatus.authenticated) {
+          // Router segera mengganti splash → home, jadi dialog dipasang di
+          // navigator root (bukan context splash) setelah frame berikutnya.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final rootContext = rootNavigatorKey.currentContext;
+            if (rootContext != null) TrialReminderDialog.showIfNeeded(rootContext);
+          });
         }
       } catch (_) {
         // Jaring pengaman terakhir — auth.init() sendiri sudah menangkap

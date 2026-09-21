@@ -1,8 +1,21 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
+}
+
+// Nilai di-trim (spasi di ujung baris key.properties membuat alias/path/password tidak cocok);
+// storeFile relatif terhadap folder android/ (rootProject), bukan android/app/.
+fun keystoreProp(name: String): String? = keystoreProperties.getProperty(name)?.trim()
 
 android {
     namespace = "com.logistax.logistax_mobile"
@@ -26,11 +39,20 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProp("keyAlias")
+            keyPassword = keystoreProp("keyPassword")
+            storeFile = keystoreProp("storeFile")?.let { rootProject.file(it) }
+            storePassword = keystoreProp("storePassword")
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 }

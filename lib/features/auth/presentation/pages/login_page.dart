@@ -10,6 +10,9 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/storage/secure_storage.dart';
+import '../../../../core/storage/session_prefs.dart';
+import '../../../intern/intern_config.dart';
+import '../../../intern/providers/intern_session.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
@@ -36,10 +39,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   /// Email sesi terakhir — non-null berarti tombol biometrik ditampilkan.
   String? _bioEmail;
 
+  /// Mode login (Karyawan/Magang). Toggle hanya tampil bila backend magang
+  /// dikonfigurasi; tanpa itu layar ini identik dengan versi karyawan saja.
+  SessionKind _mode = SessionKind.hr;
+
+  bool get _isIntern => _mode == SessionKind.intern;
+
   @override
   void initState() {
     super.initState();
     _checkBiometric();
+    _loadMode();
+  }
+
+  Future<void> _loadMode() async {
+    if (!InternConfig.isConfigured) return;
+    final mode = await SessionPrefs.loginMode();
+    if (mounted && mode != _mode) setState(() => _mode = mode);
+  }
+
+  void _setMode(SessionKind mode) {
+    setState(() {
+      _mode = mode;
+      _error = null;
+    });
+    SessionPrefs.setLoginMode(mode);
   }
 
   @override
@@ -79,6 +103,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       if (!didAuth) return;
 
       final ok = await ref.read(authControllerProvider).resumeSession();
+      if (ok) await SessionPrefs.setLastActive(SessionKind.hr);
       if (!mounted) return;
       if (ok) {
         // Router akan redirect otomatis; go('/') untuk memastikan.
@@ -111,12 +136,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       return;
     }
 
+    if (_isIntern) {
+      await _submitIntern(email, password);
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       await ref.read(authControllerProvider).login(email, password);
+      await SessionPrefs.setLastActive(SessionKind.hr);
       // Router sudah mengalihkan halaman saat status berubah, jadi dialog
       // dipasang di navigator root — context halaman ini bisa sudah tidak ada.
       final rootContext = rootNavigatorKey.currentContext;
@@ -124,6 +155,30 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       if (rootContext != null) await TrialReminderDialog.showIfNeeded(rootContext);
       if (!mounted) return;
       context.go('/');
+    } catch (e) {
+      if (!mounted) return;
+      final message = ApiException.fromDio(e).message;
+      setState(() => _error = message);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: AppColors.error),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Login ke backend magang. Sesi karyawan (bila tersimpan) tidak disentuh.
+  Future<void> _submitIntern(String email, String password) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await ref.read(internSessionProvider).login(email, password);
+      // Router langsung pindah ke /intern — dialog dipasang di navigator root.
+      final rootContext = rootNavigatorKey.currentContext;
+      // ignore: use_build_context_synchronously
+      if (rootContext != null) await TrialReminderDialog.showIfNeeded(rootContext);
     } catch (e) {
       if (!mounted) return;
       final message = ApiException.fromDio(e).message;
@@ -201,11 +256,30 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   color: AppColors.navyDark,
                 ),
               ),
+              if (InternConfig.isConfigured) ...[
+                const SizedBox(height: 16),
+                SegmentedButton<SessionKind>(
+                  segments: const [
+                    ButtonSegment(
+                      value: SessionKind.hr,
+                      label: Text('Karyawan'),
+                      icon: Icon(Icons.badge_outlined),
+                    ),
+                    ButtonSegment(
+                      value: SessionKind.intern,
+                      label: Text('Magang'),
+                      icon: Icon(Icons.school_outlined),
+                    ),
+                  ],
+                  selected: {_mode},
+                  onSelectionChanged: _loading ? null : (s) => _setMode(s.first),
+                ),
+              ],
               const SizedBox(height: 20),
               AppTextField(
                 controller: _emailController,
                 label: 'Email',
-                hint: 'nama@perusahaan.com',
+                hint: _isIntern ? 'email akun magang' : 'nama@perusahaan.com',
                 keyboardType: TextInputType.emailAddress,
                 prefixIcon: Icons.mail_outline,
               ),
@@ -234,20 +308,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   style: const TextStyle(color: AppColors.error, fontSize: 13),
                 ),
               ],
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => context.push('/forgot'),
-                  child: const Text('Lupa Password?'),
-                ),
-              ),
+              // Lupa password hanya untuk akun karyawan (backend magang tidak
+              // menyediakan reset password).
+              if (!_isIntern)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => context.push('/forgot'),
+                    child: const Text('Lupa Password?'),
+                  ),
+                )
+              else
+                const SizedBox(height: 16),
               const SizedBox(height: 4),
               AppButton(
                 label: 'Masuk',
                 loading: _loading,
                 onPressed: _submit,
               ),
-              if (_bioEmail != null) ...[
+              if (_bioEmail != null && !_isIntern) ...[
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: _biometricLogin,

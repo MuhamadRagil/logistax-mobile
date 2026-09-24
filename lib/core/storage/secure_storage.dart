@@ -18,5 +18,11 @@ class SecureStorage {
   static Future<void> saveUser(String userJson) => _storage.write(key: 'user', value: userJson);
   static Future<String?> getUser() => _storage.read(key: 'user');
 
-  static Future<void> clear() => _storage.deleteAll();
+  /// Hapus hanya key sesi HR — BUKAN `deleteAll()`, karena storage yang sama
+  /// juga menyimpan sesi intern (`intern_*`) yang tidak boleh ikut terhapus.
+  static Future<void> clear() async {
+    await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
+    await _storage.delete(key: 'user');
+  }
 }

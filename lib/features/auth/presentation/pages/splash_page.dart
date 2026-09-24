@@ -7,6 +7,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/storage/secure_storage.dart';
 import '../../../../shared/widgets/trial_reminder_dialog.dart';
+import '../../../intern/providers/intern_session.dart';
 import '../../providers/auth_provider.dart';
 
 /// Splash: logo fade-in + cek sesi. Redirect ditangani GoRouter
@@ -28,10 +29,27 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       setState(() => _visible = true);
       try {
         final auth = ref.read(authControllerProvider);
+        // Diambil sebelum await: saat router berpindah halaman, splash sudah
+        // dispose dan `ref` tidak boleh dipakai lagi.
+        final intern = ref.read(internSessionProvider);
         if (auth.status == AuthStatus.unknown) {
-          await auth.init();
+          // Tanpa token intern tersimpan, shouldRestoreFirst() selalu false →
+          // alur karyawan identik dengan sebelumnya.
+          if (await intern.shouldRestoreFirst()) {
+            // Samakan durasi splash dengan alur karyawan (min. 1,4 detik).
+            await Future.delayed(const Duration(milliseconds: 1400));
+            if (await intern.restore()) {
+              auth.skipSessionCheck();
+            } else {
+              await auth.init();
+            }
+          } else {
+            await auth.init();
+            // Sesi karyawan tidak valid tapi sesi intern tersimpan → pakai itu.
+            if (auth.status == AuthStatus.unauthenticated) await intern.restore();
+          }
         }
-        if (auth.status == AuthStatus.authenticated) {
+        if (auth.status == AuthStatus.authenticated || intern.isActive) {
           // Router segera mengganti splash → home, jadi dialog dipasang di
           // navigator root (bukan context splash) setelah frame berikutnya.
           WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -111,6 +111,18 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Dipakai HANYA oleh alur intern: saat splash memulihkan sesi intern, cek
+  /// sesi HR dilewati. Status ditandai unauthenticated agar setelah logout
+  /// intern pengguna diarahkan ke layar login — bukan otomatis masuk ke akun
+  /// karyawan yang mungkin tersimpan di perangkat yang sama. Token HR tetap
+  /// tersimpan dan dipulihkan normal saat app dibuka berikutnya.
+  void skipSessionCheck() {
+    if (status == AuthStatus.unknown) {
+      status = AuthStatus.unauthenticated;
+      notifyListeners();
+    }
+  }
+
   void sessionExpired() {
     if (status == AuthStatus.authenticated) {
       user = null;

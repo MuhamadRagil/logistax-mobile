@@ -15,8 +15,10 @@ import 'package:logistax_mobile/features/auth/presentation/pages/login_page.dart
 import 'package:logistax_mobile/features/intern/data/intern_storage.dart';
 import 'package:logistax_mobile/features/intern/intern_config.dart';
 import 'package:logistax_mobile/features/intern/models/intern_models.dart';
+import 'package:logistax_mobile/features/intern/presentation/pages/intern_certificate_page.dart';
 import 'package:logistax_mobile/features/intern/presentation/pages/intern_home_page.dart';
 import 'package:logistax_mobile/features/intern/presentation/pages/intern_profile_page.dart';
+import 'package:logistax_mobile/features/intern/providers/intern_providers.dart';
 import 'package:logistax_mobile/features/intern/providers/intern_session.dart';
 import 'package:logistax_mobile/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,6 +49,15 @@ Future<void> _boot(WidgetTester tester) async {
   await tester.pumpWidget(const ProviderScope(child: LogistaxApp()));
   for (var i = 0; i < 30; i++) {
     await tester.pump(const Duration(milliseconds: 200));
+  }
+  // Selama masa trial (25 Sep–5 Okt 2026) dialog pengingat muncul setelah
+  // login/pemulihan sesi dan menutupi layar — tutup agar tap berikutnya kena.
+  final dismiss = find.text('Saya Mengerti');
+  if (dismiss.evaluate().isNotEmpty) {
+    await tester.tap(dismiss);
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
   }
 }
 
@@ -111,6 +122,31 @@ void main() {
       await _seed(intern: true, lastActive: 'hr');
       expect(await restoreFirst(), isTrue);
     });
+  });
+
+  testWidgets('halaman sertifikat tanpa info password/NIM, tombol unduh tetap ada', (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        internSessionProvider.overrideWith((ref) => InternSessionController()..profile = _profile),
+        internCertificateProvider.overrideWith(
+          (ref) async => const InternCertificate(
+            certificateNumber: '001/LOGISTAX/INTERN/IX/2026',
+            issuedDate: '2026-09-29',
+            issuedCity: 'Jakarta',
+          ),
+        ),
+      ],
+      child: const MaterialApp(home: InternCertificatePage()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Sertifikat Tersedia'), findsOneWidget);
+    expect(find.text('Unduh & Buka PDF'), findsOneWidget);
+    expect(find.textContaining('password', findRichText: true), findsNothing);
+    expect(find.textContaining('Password', findRichText: true), findsNothing);
+    expect(find.textContaining(_profile.nim, findRichText: true), findsNothing);
+    expect(find.byIcon(Icons.lock_rounded), findsNothing);
   });
 
   group('alur app utuh', () {

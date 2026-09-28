@@ -12,8 +12,8 @@ import '../../models/intern_models.dart';
 import '../../providers/intern_providers.dart';
 import '../../providers/intern_session.dart';
 
-/// Status & unduhan sertifikat magang. PDF dilindungi password = NIM;
-/// info ini ditampilkan jelas SEBELUM tombol unduh ditekan.
+/// Status & unduhan sertifikat magang. NIM hanya dipakai untuk nama file
+/// unduhan (PDF sertifikat tidak lagi diproteksi password).
 class InternCertificatePage extends ConsumerStatefulWidget {
   const InternCertificatePage({super.key});
 
@@ -86,7 +86,6 @@ class _InternCertificatePageState extends ConsumerState<InternCertificatePage> {
                 )
               : _CertificateView(
                   cert: cert,
-                  nim: nim,
                   downloading: _downloading,
                   onDownload: () => _download(nim),
                 ),
@@ -99,13 +98,11 @@ class _InternCertificatePageState extends ConsumerState<InternCertificatePage> {
 class _CertificateView extends StatelessWidget {
   const _CertificateView({
     required this.cert,
-    required this.nim,
     required this.downloading,
     required this.onDownload,
   });
 
   final InternCertificate cert;
-  final String nim;
   final bool downloading;
   final VoidCallback onDownload;
 
@@ -133,43 +130,6 @@ class _CertificateView extends StatelessWidget {
                 _row(theme, 'Kota', cert.issuedCity ?? '-'),
               ],
             ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.warning.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.warning.withValues(alpha: 0.45)),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.lock_rounded, color: AppColors.warning),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    style: theme.textTheme.bodySmall?.copyWith(height: 1.45),
-                    children: [
-                      const TextSpan(
-                        text: 'PDF sertifikat dilindungi password. ',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const TextSpan(
-                        text: 'Setelah diunduh, aplikasi PDF akan meminta password saat file dibuka. '
-                            'Password-nya adalah NIM Anda',
-                      ),
-                      TextSpan(
-                        text: nim.isEmpty ? '.' : ': $nim',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
         const SizedBox(height: 20),

@@ -50,15 +50,6 @@ Future<void> _boot(WidgetTester tester) async {
   for (var i = 0; i < 30; i++) {
     await tester.pump(const Duration(milliseconds: 200));
   }
-  // Selama masa trial (25 Sep–5 Okt 2026) dialog pengingat muncul setelah
-  // login/pemulihan sesi dan menutupi layar — tutup agar tap berikutnya kena.
-  final dismiss = find.text('Saya Mengerti');
-  if (dismiss.evaluate().isNotEmpty) {
-    await tester.tap(dismiss);
-    for (var i = 0; i < 5; i++) {
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-  }
 }
 
 void main() {

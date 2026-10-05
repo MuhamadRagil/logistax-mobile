@@ -4,9 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/router/app_router.dart';
 import '../../../../core/storage/secure_storage.dart';
-import '../../../../shared/widgets/trial_reminder_dialog.dart';
 import '../../../intern/providers/intern_session.dart';
 import '../../providers/auth_provider.dart';
 
@@ -48,14 +46,6 @@ class _SplashPageState extends ConsumerState<SplashPage> {
             // Sesi karyawan tidak valid tapi sesi intern tersimpan → pakai itu.
             if (auth.status == AuthStatus.unauthenticated) await intern.restore();
           }
-        }
-        if (auth.status == AuthStatus.authenticated || intern.isActive) {
-          // Router segera mengganti splash → home, jadi dialog dipasang di
-          // navigator root (bukan context splash) setelah frame berikutnya.
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            final rootContext = rootNavigatorKey.currentContext;
-            if (rootContext != null) TrialReminderDialog.showIfNeeded(rootContext);
-          });
         }
       } catch (_) {
         // Jaring pengaman terakhir — auth.init() sendiri sudah menangkap

@@ -8,12 +8,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
-import '../../../../core/router/app_router.dart';
 import '../../../../core/storage/secure_storage.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
-import '../../../../shared/widgets/trial_reminder_dialog.dart';
 import '../../providers/auth_provider.dart';
 
 /// Halaman login: email + password, plus login biometrik bila sesi
@@ -117,11 +115,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
     try {
       await ref.read(authControllerProvider).login(email, password);
-      // Router sudah mengalihkan halaman saat status berubah, jadi dialog
-      // dipasang di navigator root — context halaman ini bisa sudah tidak ada.
-      final rootContext = rootNavigatorKey.currentContext;
-      // ignore: use_build_context_synchronously
-      if (rootContext != null) await TrialReminderDialog.showIfNeeded(rootContext);
       if (!mounted) return;
       context.go('/');
     } catch (e) {

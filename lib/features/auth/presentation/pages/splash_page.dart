@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/storage/secure_storage.dart';
+import '../../../intern/providers/intern_session.dart';
 import '../../providers/auth_provider.dart';
 
 /// Splash: logo fade-in + cek sesi. Redirect ditangani GoRouter
@@ -26,8 +27,25 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       setState(() => _visible = true);
       try {
         final auth = ref.read(authControllerProvider);
+        // Diambil sebelum await: saat router berpindah halaman, splash sudah
+        // dispose dan `ref` tidak boleh dipakai lagi.
+        final intern = ref.read(internSessionProvider);
         if (auth.status == AuthStatus.unknown) {
-          await auth.init();
+          // Tanpa token intern tersimpan, shouldRestoreFirst() selalu false →
+          // alur karyawan identik dengan sebelumnya.
+          if (await intern.shouldRestoreFirst()) {
+            // Samakan durasi splash dengan alur karyawan (min. 1,4 detik).
+            await Future.delayed(const Duration(milliseconds: 1400));
+            if (await intern.restore()) {
+              auth.skipSessionCheck();
+            } else {
+              await auth.init();
+            }
+          } else {
+            await auth.init();
+            // Sesi karyawan tidak valid tapi sesi intern tersimpan → pakai itu.
+            if (auth.status == AuthStatus.unauthenticated) await intern.restore();
+          }
         }
       } catch (_) {
         // Jaring pengaman terakhir — auth.init() sendiri sudah menangkap

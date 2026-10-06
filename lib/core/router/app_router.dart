@@ -12,6 +12,14 @@ import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/intern/presentation/intern_shell.dart';
+import '../../features/intern/presentation/pages/intern_attendance_page.dart';
+import '../../features/intern/presentation/pages/intern_certificate_page.dart';
+import '../../features/intern/presentation/pages/intern_evaluation_page.dart';
+import '../../features/intern/presentation/pages/intern_home_page.dart';
+import '../../features/intern/presentation/pages/intern_leave_page.dart';
+import '../../features/intern/presentation/pages/intern_profile_page.dart';
+import '../../features/intern/providers/intern_session.dart';
 import '../../features/kpi/presentation/pages/kpi_history_page.dart';
 import '../../features/kpi/presentation/pages/kpi_leaderboard_page.dart';
 import '../../features/kpi/presentation/pages/my_kpi_page.dart';
@@ -45,16 +53,24 @@ final routerProvider = Provider<GoRouter>((ref) {
   // read (bukan watch) supaya router hanya dibuat sekali;
   // perubahan auth memicu redirect via refreshListenable.
   final auth = ref.read(authControllerProvider);
+  final intern = ref.read(internSessionProvider);
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
-    refreshListenable: auth,
+    refreshListenable: Listenable.merge([auth, intern]),
     redirect: (context, state) {
       try {
         final loc = state.matchedLocation;
         final isAuthPage =
             loc == '/login' || loc == '/forgot' || loc == '/reset' || loc == '/splash';
+
+        // Sesi intern aktif → hanya rute /intern/*. Sesi intern tidak aktif →
+        // rute /intern/* tertutup (HR login diarahkan ke home). Selebihnya
+        // alur HR di bawah tidak berubah.
+        final isInternRoute = loc == '/intern' || loc.startsWith('/intern/');
+        if (intern.isActive) return isInternRoute ? null : '/intern';
+        if (isInternRoute && auth.status == AuthStatus.authenticated) return '/';
 
         switch (auth.status) {
           case AuthStatus.unknown:
@@ -175,6 +191,30 @@ final routerProvider = Provider<GoRouter>((ref) {
                 ),
               ],
             ),
+          ]),
+        ],
+      ),
+
+      // ── Intern (backend magang, sesi terpisah) ─────────
+      GoRoute(path: '/intern/sertifikat', builder: (_, _) => const InternCertificatePage()),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            InternShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/intern', builder: (_, _) => const InternHomePage()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/intern/absensi', builder: (_, _) => const InternAttendancePage()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/intern/izin', builder: (_, _) => const InternLeavePage()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/intern/nilai', builder: (_, _) => const InternEvaluationPage()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/intern/profil', builder: (_, _) => const InternProfilePage()),
           ]),
         ],
       ),

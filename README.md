@@ -23,6 +23,25 @@ flutter run --dart-define=API_URL=http://192.168.1.10:3001/api
 
 Build APK: `flutter build apk --debug` → `build/app/outputs/flutter-apk/app-debug.apk`
 
+## Build Release
+
+Satu APK dipakai karyawan dan intern. Fitur intern (`lib/features/intern/`) harus
+selalu ada, dan toggle Karyawan/Magang hanya muncul bila APK dibangun dengan
+`INTERN_API_URL`. Rilis hanya dari `master` yang bersih dan ter-pull:
+
+```powershell
+.\scripts\build_release.ps1      # Windows (atau: bash scripts/build_release.sh)
+```
+
+Perintah yang dijalankan skrip (satu-satunya yang benar):
+
+```
+flutter build apk --release --dart-define=INTERN_API_URL=https://logistax-magang-production.up.railway.app/api
+```
+
+Naikkan build number setelah `+` di `pubspec.yaml` tiap rilis. Hasil disalin ke
+`build/app/outputs/flutter-apk/logistax-absen-<versi>.apk`. Aturan lengkap: `CLAUDE.md`.
+
 ## Menguji scan QR
 
 1. Login di web dashboard (`logistax-web`) sebagai HRD.

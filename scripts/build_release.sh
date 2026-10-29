@@ -8,8 +8,8 @@
 # URL backend magang SENGAJA tetap (tidak ada opsi untuk mengubahnya).
 set -u
 
-INTERN_URL='https://logistax-magang-production.up.railway.app/api'
-INTERN_HOST='logistax-magang-production.up.railway.app'
+INTERN_URL='https://magang-api.logistaxcore.com/api'
+INTERN_HOST='magang-api.logistaxcore.com'
 CHECK_ONLY=0
 ALLOW_DIRTY=0
 for a in "$@"; do

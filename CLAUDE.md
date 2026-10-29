@@ -12,7 +12,7 @@
 - Perintah build rilis yang benar (satu-satunya):
 
   ```
-  flutter build apk --release --dart-define=INTERN_API_URL=https://logistax-magang-production.up.railway.app/api
+  flutter build apk --release --dart-define=INTERN_API_URL=https://magang-api.logistaxcore.com/api
   ```
 
 - Gunakan skrip `scripts/build_release.ps1` (Windows) atau `scripts/build_release.sh`;

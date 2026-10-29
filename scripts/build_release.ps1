@@ -12,8 +12,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$InternUrl = 'https://logistax-magang-production.up.railway.app/api'
-$InternHost = 'logistax-magang-production.up.railway.app'
+$InternUrl = 'https://magang-api.logistaxcore.com/api'
+$InternHost = 'magang-api.logistaxcore.com'
 $Root = Resolve-Path (Join-Path $PSScriptRoot '..')
 Set-Location $Root
 

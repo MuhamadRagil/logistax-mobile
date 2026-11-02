@@ -5,7 +5,7 @@ class ApiConstants {
 
   static const String baseUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'https://logistax-api-production.up.railway.app/api',
+    defaultValue: 'https://api.logistaxcore.com/api',
   );
 
   // ── Auth ──────────────────────────────────────────────
